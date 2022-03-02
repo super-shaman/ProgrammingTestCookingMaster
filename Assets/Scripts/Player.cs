@@ -21,6 +21,30 @@ public class Player : Entity
         heldObjects.Add(e);
     }
 
+    public int GetHoldCount()
+    {
+        return heldObjects.Count;
+    }
+
+    public Vegetable GetVegetable()
+    {
+        if (heldObjects.Count > 0)
+        {
+            Vegetable v = heldObjects[0].GetComponent<Vegetable>();
+            if (v != null)
+            {
+                heldObjects.RemoveAt(0);
+                return v;
+            }
+        }
+        return null;
+    }
+
+    public bool CheckIngredients(List<int> ingredients)
+    {
+        return false;
+    }
+
     // Update is called once per frame
     void Update()
     {

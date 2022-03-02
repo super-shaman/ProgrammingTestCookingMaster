@@ -758,6 +758,13 @@ MonoBehaviour:
   - {fileID: -442530791357267871, guid: 62e96943642bd7d4d80c914164c77635, type: 3}
   - {fileID: 8843325369961015492, guid: c98aad24e49cccb47b81ed9296bef992, type: 3}
   - {fileID: -1399243548381846894, guid: db2043f3b2ce05b41b2669f8f1998885, type: 3}
+  canvas: {fileID: 1555568196}
+  customer: {fileID: 5255716200846534701, guid: 4fe6ced584214384aaa47154d3a437bf,
+    type: 3}
+  plusSign: {fileID: 8677662769973523502, guid: 1e5cba276e2787a4799f45c066bb8f9e,
+    type: 3}
+  choppingBoard: {fileID: 3178155332260657510, guid: f66828ca292b73d40b099657327268cb,
+    type: 3}
 --- !u!4 &1835928928
 Transform:
   m_ObjectHideFlags: 0

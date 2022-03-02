@@ -13,12 +13,17 @@ public class Board : MonoBehaviour
     public Player Player1;
     public Player Player2;
     public Vegetable[] Vegetables;
+    public Canvas canvas;
+    public Customer customer;
+    public GameObject plusSign;
+    public ChoppingBoard choppingBoard;
     int[,] types;
     Tile[,] tiles;
-
+    public static Board board;
 
     void Start()
     {
+        board = this;
         for (int i = 0; i < Vegetables.Length; i++)
         {
             Vegetables[i].type = i;
@@ -79,6 +84,37 @@ public class Board : MonoBehaviour
         Player2.target = tiles[Player2.index.x, Player2.index.y];
         Player1.target.occupant = Player1;
         Player2.target.occupant = Player2;
+        for (int i = 1; i < width-1; i++)
+        {
+            SpawnCustomerOnTile(tiles[i, height - 1]);
+        }
+        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) - 1, 0);
+        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) + 1, 0);
+
+    }
+
+    void SpawnChoppingBoard(int i, int ii)
+    {
+        ChoppingBoard cb = Instantiate(choppingBoard);
+        Tile choppingBoardTile = tiles[i,ii];
+        cb.transform.position = choppingBoardTile.transform.position;
+        choppingBoardTile.occupant = cb;
+    }
+
+    public IEnumerator SpawnCustomer(Tile tile)
+    {
+        yield return new WaitForSeconds(Random.Range(0, 5.0f));
+        Customer c = Instantiate(customer);
+        c.transform.SetParent(canvas.transform, false);
+        c.target = tile;
+        c.transform.position = c.target.transform.position + new Vector3(0, 10, 0);
+        c.Load(Random.Range(5.0f, 10.0f));
+        c.target.occupant = c;
+    }
+
+    public void SpawnCustomerOnTile(Tile tile)
+    {
+        StartCoroutine(SpawnCustomer(tile));
     }
 
     void Move(Player p, Vector2Int dir)
@@ -91,8 +127,22 @@ public class Board : MonoBehaviour
             if (e.ClassType == 1)
             {
                 Vegetable veg = e.GetComponent<Vegetable>();
-                p.AddEntity(Instantiate(Vegetables[veg.type]));
-            }else if (e.ClassType == 0)
+                if (p.GetHoldCount() < 2)
+                {
+                    p.AddEntity(Instantiate(Vegetables[veg.type]));
+                }
+            }
+            else if (e.ClassType == 3)
+            {
+                Vegetable veg = p.GetVegetable();
+                if (veg != null)
+                {
+                    ChoppingBoard cb = e.GetComponent<ChoppingBoard>();
+                    cb.AddVegetable(veg);
+                }
+
+            }
+            else if (e.ClassType == 0)
             {
                 return;
             }
