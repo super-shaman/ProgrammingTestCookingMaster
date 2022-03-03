@@ -17,9 +17,12 @@ public class Board : MonoBehaviour
     public Customer customer;
     public GameObject plusSign;
     public ChoppingBoard choppingBoard;
+    public PlateRack plateRack;
     int[,] types;
     Tile[,] tiles;
     public static Board board;
+
+    Vector3 offset = new Vector3(0, 0, -1.0f / 16.0f);
 
     void Start()
     {
@@ -69,14 +72,14 @@ public class Board : MonoBehaviour
             Entity e = Instantiate(Vegetables[i]);
             Tile t = tiles[0, 3 + i];
             t.occupant = e;
-            e.transform.position = t.transform.position;
+            e.transform.position = t.transform.position+ offset;
         }
         for (int i = 0; i < Vegetables.Length / 2; i++)
         {
             Entity e = Instantiate(Vegetables[i+Vegetables.Length/2]);
             Tile t = tiles[width - 1, 3 + i];
             t.occupant = e;
-            e.transform.position = t.transform.position;
+            e.transform.position = t.transform.position+ offset;
         }
         Player1.index = new Vector2Int(1, Mathf.FloorToInt(height / 2.0f));
         Player2.index = new Vector2Int(width-2, Mathf.FloorToInt(height / 2.0f));
@@ -88,17 +91,21 @@ public class Board : MonoBehaviour
         {
             SpawnCustomerOnTile(tiles[i, height - 1]);
         }
-        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) - 1, 0);
-        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) + 1, 0);
+        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) - 1, 0, Player1);
+        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) + 1, 0, Player2);
+        PlateRack pr = Instantiate(plateRack);
+        pr.transform.position = tiles[Mathf.FloorToInt(width / 2.0f), 0].transform.position+ offset;
 
     }
 
-    void SpawnChoppingBoard(int i, int ii)
+    void SpawnChoppingBoard(int i, int ii, Player p)
     {
         ChoppingBoard cb = Instantiate(choppingBoard);
         Tile choppingBoardTile = tiles[i,ii];
-        cb.transform.position = choppingBoardTile.transform.position;
+        cb.transform.position = choppingBoardTile.transform.position+ offset;
         choppingBoardTile.occupant = cb;
+        cb.player = p;
+        cb.transform.SetParent(canvas.transform, false);
     }
 
     public IEnumerator SpawnCustomer(Tile tile)
@@ -107,8 +114,8 @@ public class Board : MonoBehaviour
         Customer c = Instantiate(customer);
         c.transform.SetParent(canvas.transform, false);
         c.target = tile;
-        c.transform.position = c.target.transform.position + new Vector3(0, 10, 0);
-        c.Load(Random.Range(5.0f, 10.0f));
+        c.transform.position = c.target.transform.position + new Vector3(0, 5, 0);
+        c.Load(Random.Range(1.0f, 3.0f));
         c.target.occupant = c;
     }
 
@@ -117,10 +124,8 @@ public class Board : MonoBehaviour
         StartCoroutine(SpawnCustomer(tile));
     }
 
-    void Move(Player p, Vector2Int dir)
+    void Check(Player p, Vector2Int v)
     {
-        Vector2Int v = p.index;
-        v += dir;
         Entity e = tiles[v.x, v.y].occupant;
         if (e != null)
         {
@@ -131,14 +136,37 @@ public class Board : MonoBehaviour
                 {
                     p.AddEntity(Instantiate(Vegetables[veg.type]));
                 }
-            }
-            else if (e.ClassType == 3)
+            }else if (e.ClassType == 2)
             {
-                Vegetable veg = p.GetVegetable();
-                if (veg != null)
+                Plate plate = p.GetPlate();
+                if (plate != null)
                 {
-                    ChoppingBoard cb = e.GetComponent<ChoppingBoard>();
-                    cb.AddVegetable(veg);
+                    Customer c = e.GetComponent<Customer>();
+                    if (c.TakeOrder(plate))
+                    {
+                        p.time += 10;
+                        p.points += 100;
+                        p.SetPoints();
+                    }else
+                    {
+                        p.time -= 5;
+                        p.points -= 50;
+                        p.SetPoints();
+                    }
+                }
+            }else if (e.ClassType == 3)
+            {
+                ChoppingBoard cb = e.GetComponent<ChoppingBoard>();
+                if (cb.CheckPlayer(p))
+                {
+                    Vegetable veg = p.GetVegetable();
+                    if (veg != null)
+                    {
+                        cb.AddVegetable(veg);
+                    }else
+                    {
+                        cb.Chop();
+                    }
                 }
 
             }
@@ -147,58 +175,104 @@ public class Board : MonoBehaviour
                 return;
             }
         }
-        v.x = v.x == 0 ? 1 : v.x == width - 1 ? width - 2 : v.x;
-        v.y = v.y == 0 ? 1 : v.y == height - 1 ? height - 2 : v.y;
-        p.index = v;
+    }
+
+    void Move(Player p, Vector2Int pos)
+    {
+        p.index = pos;
         p.target.occupant = null;
         p.target = tiles[p.index.x, p.index.y];
         p.target.occupant = p;
     }
 
-    // Update is called once per frame
-    void Update()
+    void UpdatePlayer(Player player, KeyCode up, KeyCode left, KeyCode down , KeyCode right)
     {
+        if (Input.GetKeyDown(up))
+        {
+            Vector2Int v = player.index;
+            v.y++;
+            Check(player, v);
+            if (v.x >= 1 && v.x < width - 1 && v.y >= 1 && v.y < height - 1)
+            {
+                Move(player, v);
+            }
+        }
+        if (Input.GetKeyDown(left))
+        {
+            Vector2Int v = player.index;
+            v.x--;
+            Check(player, v);
+            if (v.x >= 1 && v.x < width - 1 && v.y >= 1 && v.y < height - 1)
+            {
+                Move(player, v);
+            }
+        }
+        if (Input.GetKeyDown(down))
+        {
+            Vector2Int v = player.index;
+            v.y--;
+            Check(player, v);
+            if (v.x >= 1 && v.x < width - 1 && v.y >= 1 && v.y < height - 1)
+            {
+                Move(player, v);
+            }
+        }
+        if (Input.GetKeyDown(right))
+        {
+            Vector2Int v = player.index;
+            v.x++;
+            Check(player, v);
+            if (v.x >= 1 && v.x < width - 1 && v.y >= 1 && v.y < height - 1)
+            {
+                Move(player, v);
+            }
+        }
         Vector2Int p1 = new Vector2Int();
-        if (Input.GetKeyDown(KeyCode.W))
+        if (Input.GetKey(up))
         {
             p1.y++;
         }
-        if (Input.GetKeyDown(KeyCode.A))
+        if (Input.GetKey(left))
         {
             p1.x--;
         }
-        if (Input.GetKeyDown(KeyCode.S))
+        if (Input.GetKey(down))
         {
             p1.y--;
         }
-        if (Input.GetKeyDown(KeyCode.D))
+        if (Input.GetKey(right))
         {
             p1.x++;
         }
         if (p1.magnitude > 0)
         {
-            Move(Player1, p1);
+            Vector2Int dir = player.index;
+            dir += p1;
+            if (dir.x >= 1 && dir.x < width - 1 && dir.y >= 1 && dir.y < height - 1)
+            {
+                Tile t = tiles[dir.x, dir.y];
+                if ((player.transform.position - t.transform.position).magnitude < (t.transform.position - player.target.transform.position).magnitude*1.1f)
+                {
+                    Move(player, dir);
+                }
+                player.MoveDir = p1;
+            }
+            else
+            {
+
+                player.MoveDir = new Vector2Int();
+            }
         }
-        Vector2Int p2 = new Vector2Int();
-        if (Input.GetKeyDown(KeyCode.UpArrow))
+        else
         {
-            p2.y++;
+            player.MoveDir = new Vector2Int();
         }
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-        {
-            p2.x--;
-        }
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            p2.y--;
-        }
-        if (Input.GetKeyDown(KeyCode.RightArrow))
-        {
-            p2.x++;
-        }
-        if (p2.magnitude > 0)
-        {
-            Move(Player2, p2);
-        }
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        UpdatePlayer(Player1, KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D);
+        UpdatePlayer(Player2, KeyCode.UpArrow, KeyCode.LeftArrow, KeyCode.DownArrow, KeyCode.RightArrow);
     }
 }
