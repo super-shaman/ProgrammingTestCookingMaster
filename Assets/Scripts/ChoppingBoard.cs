@@ -18,6 +18,14 @@ public class ChoppingBoard : Entity
         ClassType = 3;
     }
 
+    public List<Vegetable> GetAll()
+    {
+        List<Vegetable> veggies = new List<Vegetable>();
+        veggies.AddRange(vegetables);
+        vegetables.Clear();
+        return veggies;
+    }
+
     public bool CheckPlayer(Player player)
     {
         return (player == this.player);

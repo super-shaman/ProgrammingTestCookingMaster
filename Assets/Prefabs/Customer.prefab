@@ -167,7 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2100000, guid: d70836147b566994bbbc4260eddb70d9, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_Maskable: 1
@@ -423,6 +423,7 @@ MonoBehaviour:
   offset: {x: 0, y: 1, z: 0}
   ExitPosition: {x: 0, y: 10, z: 0}
   target: {fileID: 0}
+  angeredBy: []
 --- !u!1 &8420790366476873590
 GameObject:
   m_ObjectHideFlags: 0

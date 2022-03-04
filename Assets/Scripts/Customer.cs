@@ -15,6 +15,7 @@ public class Customer : Entity
     float time;
     float timer = 0;
     bool exit = false;
+    float timerSpeed = 1;
 
     public void Load(float time)
     {
@@ -36,7 +37,7 @@ public class Customer : Entity
         this.time = range*5*time;
     }
     
-    public bool TakeOrder(Plate plate)
+    public int TakeOrder(Plate plate)
     {
         int[] typeCounter1 = new int[Board.board.Vegetables.Length];
         for (int i = 0; i < OrderedIngredients.Count; i++)
@@ -49,11 +50,16 @@ public class Customer : Entity
             typeCounter2[plate.vegetables[i].type]++;
         }
         Destroy(plate.gameObject);
+        int orderAmount = 0;
         for (int i = 0; i < typeCounter1.Length; i++)
         {
             if (typeCounter1[i] != typeCounter2[i])
             {
-                return false;
+                timerSpeed = 1.5f;
+                return 0;
+            }else
+            {
+                orderAmount += typeCounter1[i];
             }
         }
         target.occupant = null;
@@ -61,8 +67,10 @@ public class Customer : Entity
         exit = true;
         ExitPosition = transform.position + new Vector3(0, 5, 0);
         StartCoroutine(Despawn());
-        return true;
+        return orderAmount;
     }
+
+    public List<Player> angeredBy = new List<Player>();
 
     void Start()
     {
@@ -89,6 +97,11 @@ public class Customer : Entity
 
     }
 
+    public float GetTimePercent()
+    {
+        return timer / time;
+    }
+
     void Update()
     {
         if (exit)
@@ -96,10 +109,18 @@ public class Customer : Entity
             Exit();
             return;
         }
-        timer += Time.deltaTime;
+        timer += Time.deltaTime* timerSpeed;
         slider.value = 1 - (timer > time ? time : timer) / time;
         if (timer >= time)
         {
+            for (int i = 0; i < angeredBy.Count; i++)
+            {
+                Player p = angeredBy[i];
+                p.time -= 5;
+                p.points -= 50;
+                p.SetPoints();
+            }
+            Board.board.CustomerDisatisfied();
             target.occupant = null;
             Board.board.SpawnCustomerOnTile(target);
             exit = true;

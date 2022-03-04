@@ -12,16 +12,40 @@ public class Player : Entity
     public Text timeText;
     public Tile target;
     public Vector2Int index;
+    public int PlayerNum;
     List<Entity> heldObjects = new List<Entity>();
     float speed = 5;
     public bool up;
     public bool down;
     public bool right;
     public bool left;
+    float SpeedPowerUpTime = 0;
 
     void Start()
     {
         ClassType = 0;
+    }
+
+    public void PowerUp(int powerUp)
+    {
+        if (powerUp == 0)
+        {
+            SpeedPowerUpTime += 5;
+        }else if (powerUp == 1)
+        {
+            time += 10;
+        }else if (powerUp == 2)
+        {
+            points += 10;
+        }
+    }
+
+    public List<Entity> DropAll()
+    {
+        List<Entity> el = new List<Entity>();
+        el.AddRange(heldObjects);
+        heldObjects.Clear();
+        return el;
     }
 
     public void AddEntity(Entity e)
@@ -76,7 +100,7 @@ public class Player : Entity
 
     public Vector2Int MoveDir;
     float timer = 0;
-    bool dead = false;
+    public bool dead = false;
     // Update is called once per frame
     void Update()
     {
@@ -92,10 +116,17 @@ public class Player : Entity
         {
             dead = true;
         }
-        Vector3 v = target.transform.position + new Vector3(0, 0, -1.0f / 16.0f) - transform.position;
-        if (v.magnitude > speed * Time.deltaTime * 0.9f)
+        float speedMul = 1;
+        if (SpeedPowerUpTime > 0)
         {
-            transform.position += v.normalized * speed * Time.deltaTime;
+            SpeedPowerUpTime -= Time.deltaTime;
+            SpeedPowerUpTime = SpeedPowerUpTime < 0 ? 0 : SpeedPowerUpTime;
+            speedMul = 2;
+        }
+        Vector3 v = target.transform.position + new Vector3(0, 0, -1.0f / 16.0f) - transform.position;
+        if (v.magnitude > speed* speedMul * Time.deltaTime * 0.9f)
+        {
+            transform.position += v.normalized * speed* speedMul * Time.deltaTime;
         }
         else
         {

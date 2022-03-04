@@ -29,7 +29,7 @@ public class Plate : Entity
     }
     void Start()
     {
-        ClassType = 4;
+        ClassType = 5;
     }
 
     // Update is called once per frame

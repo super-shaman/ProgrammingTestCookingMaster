@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Board : MonoBehaviour
 {
@@ -18,6 +19,9 @@ public class Board : MonoBehaviour
     public GameObject plusSign;
     public ChoppingBoard choppingBoard;
     public PlateRack plateRack;
+    public Trash trash;
+    public PowerUp[] powerUps;
+    public GameObject resetMenu;
     int[,] types;
     Tile[,] tiles;
     public static Board board;
@@ -91,14 +95,14 @@ public class Board : MonoBehaviour
         {
             SpawnCustomerOnTile(tiles[i, height - 1]);
         }
-        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) - 1, 0, Player1);
-        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) + 1, 0, Player2);
+        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) - 1, 0, Player1, false);
+        SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) + 1, 0, Player2, true);
         PlateRack pr = Instantiate(plateRack);
         pr.transform.position = tiles[Mathf.FloorToInt(width / 2.0f), 0].transform.position+ offset;
 
     }
 
-    void SpawnChoppingBoard(int i, int ii, Player p)
+    void SpawnChoppingBoard(int i, int ii, Player p, bool right)
     {
         ChoppingBoard cb = Instantiate(choppingBoard);
         Tile choppingBoardTile = tiles[i,ii];
@@ -106,6 +110,11 @@ public class Board : MonoBehaviour
         choppingBoardTile.occupant = cb;
         cb.player = p;
         cb.transform.SetParent(canvas.transform, false);
+        Trash trash1 = Instantiate(trash);
+        Tile tt = tiles[right ? i + 1 : i - 1, ii];
+        trash1.transform.position = tt.transform.position + offset;
+        trash1.cb = cb;
+        tt.occupant = trash1;
     }
 
     public IEnumerator SpawnCustomer(Tile tile)
@@ -115,13 +124,34 @@ public class Board : MonoBehaviour
         c.transform.SetParent(canvas.transform, false);
         c.target = tile;
         c.transform.position = c.target.transform.position + new Vector3(0, 5, 0);
-        c.Load(Random.Range(1.0f, 3.0f));
+        c.Load(Random.Range(6.0f,10.0f));
         c.target.occupant = c;
     }
 
     public void SpawnCustomerOnTile(Tile tile)
     {
         StartCoroutine(SpawnCustomer(tile));
+    }
+
+    void SpawnPowerUp(int player)
+    {
+        int r = Random.Range(0, powerUps.Length / 2);
+        PowerUp p = Instantiate(powerUps[powerUps.Length / 2 * player+r]);
+        Vector2Int pos = new Vector2Int(Random.Range(1, width - 1), Random.Range(1, height - 1));
+        Tile t = tiles[pos.x, pos.y];
+        p.transform.position = t.transform.position+offset;
+        t.occupant = p;
+
+    }
+
+    public void CustomerDisatisfied()
+    {
+        Player1.time -= 5;
+        Player1.points -= 50;
+        Player1.SetPoints();
+        Player2.time -= 5;
+        Player2.points -= 50;
+        Player2.SetPoints();
     }
 
     void Check(Player p, Vector2Int v)
@@ -142,13 +172,23 @@ public class Board : MonoBehaviour
                 if (plate != null)
                 {
                     Customer c = e.GetComponent<Customer>();
-                    if (c.TakeOrder(plate))
+                    int orderAmount = c.TakeOrder(plate);
+                    if (orderAmount > 0)
                     {
-                        p.time += 10;
-                        p.points += 100;
+                        c.angeredBy.Clear();
+                        p.time += 5*orderAmount;
+                        p.points += 50*orderAmount;
                         p.SetPoints();
+                        if (c.GetTimePercent() < 0.30f)
+                        {
+                            SpawnPowerUp(p.PlayerNum);
+                        }
                     }else
                     {
+                        if (!c.angeredBy.Contains(p))
+                        {
+                            c.angeredBy.Add(p);
+                        }
                         p.time -= 5;
                         p.points -= 50;
                         p.SetPoints();
@@ -169,6 +209,18 @@ public class Board : MonoBehaviour
                     }
                 }
 
+            }else if (e.ClassType == 4)
+            {
+                List<Entity> ho = p.DropAll();
+                Trash t = e.GetComponent<Trash>();
+                int a = t.Empty(ho);
+                p.points -= 10*a;
+                p.time -= a * 5;
+                p.SetPoints();
+            }else if (e.ClassType == 6)
+            {
+                p.PowerUp(e.GetComponent<PowerUp>().PowerUpType);
+                Destroy(e.gameObject);
             }
             else if (e.ClassType == 0)
             {
@@ -253,6 +305,7 @@ public class Board : MonoBehaviour
                 Tile t = tiles[dir.x, dir.y];
                 if ((player.transform.position - t.transform.position).magnitude < (t.transform.position - player.target.transform.position).magnitude*1.1f)
                 {
+                    Check(player, dir);
                     Move(player, dir);
                 }
                 player.MoveDir = p1;
@@ -269,9 +322,18 @@ public class Board : MonoBehaviour
         }
     }
 
+    public void ResetGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
     // Update is called once per frame
     void Update()
     {
+        if (Player1.dead && Player2.dead && !resetMenu.activeInHierarchy)
+        {
+            resetMenu.SetActive(true);
+        }
         UpdatePlayer(Player1, KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D);
         UpdatePlayer(Player2, KeyCode.UpArrow, KeyCode.LeftArrow, KeyCode.DownArrow, KeyCode.RightArrow);
     }
