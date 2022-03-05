@@ -20,10 +20,24 @@ public class Player : Entity
     public bool right;
     public bool left;
     float SpeedPowerUpTime = 0;
+    float startingTime = 0;
 
     void Start()
     {
+        startingTime = time;
         ClassType = 0;
+    }
+
+    public void Reset()
+    {
+        time = startingTime;
+        points = 0;
+        SetPoints();
+        target.occupant = null;
+        target = null;
+        dead = false;
+        SpeedPowerUpTime = 0;
+        timer = 0;
     }
 
     public void PowerUp(int powerUp)
@@ -97,8 +111,7 @@ public class Player : Entity
     {
         pointsText.text = "" + points + "  -  Points";
     }
-
-    public Vector2Int MoveDir;
+    
     float timer = 0;
     public bool dead = false;
     // Update is called once per frame

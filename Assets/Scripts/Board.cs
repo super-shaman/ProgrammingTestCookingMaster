@@ -22,9 +22,12 @@ public class Board : MonoBehaviour
     public Trash trash;
     public PowerUp[] powerUps;
     public GameObject resetMenu;
+    public ScoreBoard scoreBoard;
+    public GameObject pauseMenu;
     int[,] types;
     Tile[,] tiles;
     public static Board board;
+    List<Trash> trashCans = new List<Trash>();
 
     Vector3 offset = new Vector3(0, 0, -1.0f / 16.0f);
 
@@ -91,6 +94,8 @@ public class Board : MonoBehaviour
         Player2.target = tiles[Player2.index.x, Player2.index.y];
         Player1.target.occupant = Player1;
         Player2.target.occupant = Player2;
+        Player1.transform.position = Player1.target.transform.position+offset;
+        Player2.transform.position = Player2.target.transform.position + offset;
         for (int i = 1; i < width-1; i++)
         {
             SpawnCustomerOnTile(tiles[i, height - 1]);
@@ -99,6 +104,7 @@ public class Board : MonoBehaviour
         SpawnChoppingBoard(Mathf.FloorToInt(width / 2.0f) + 1, 0, Player2, true);
         PlateRack pr = Instantiate(plateRack);
         pr.transform.position = tiles[Mathf.FloorToInt(width / 2.0f), 0].transform.position+ offset;
+        scoreBoard.Load();
 
     }
 
@@ -115,6 +121,7 @@ public class Board : MonoBehaviour
         trash1.transform.position = tt.transform.position + offset;
         trash1.cb = cb;
         tt.occupant = trash1;
+        trashCans.Add(trash1);
     }
 
     public IEnumerator SpawnCustomer(Tile tile)
@@ -308,23 +315,55 @@ public class Board : MonoBehaviour
                     Check(player, dir);
                     Move(player, dir);
                 }
-                player.MoveDir = p1;
             }
-            else
-            {
+        }
+    }
 
-                player.MoveDir = new Vector2Int();
-            }
-        }
-        else
+    void ResetPlayer(Player p)
+    {
+        for (int i = 0; i < trashCans.Count; i++)
         {
-            player.MoveDir = new Vector2Int();
+            trashCans[i].Empty(p.DropAll());
         }
+        p.Reset();
     }
 
     public void ResetGame()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        scoreBoard.Save();
+        ResetPlayer(Player1);
+        ResetPlayer(Player2);
+        Player1.index = new Vector2Int(1, Mathf.FloorToInt(height / 2.0f));
+        Player2.index = new Vector2Int(width - 2, Mathf.FloorToInt(height / 2.0f));
+        Player1.target = tiles[Player1.index.x, Player1.index.y];
+        Player2.target = tiles[Player2.index.x, Player2.index.y];
+        Player1.target.occupant = Player1;
+        Player2.target.occupant = Player2;
+        Player1.transform.position = Player1.target.transform.position + offset;
+        Player2.transform.position = Player2.target.transform.position + offset;
+        Customer[] customers = FindObjectsOfType<Customer>();
+        for (int i = 0; i < customers.Length; i++)
+        {
+            Destroy(customers[i].gameObject);
+        }
+        for (int i = 1; i < width - 1; i++)
+        {
+            SpawnCustomerOnTile(tiles[i, height - 1]);
+        }
+        resetMenu.SetActive(false);
+    }
+
+
+    public void PauseGame()
+    {
+        if (pauseMenu.activeSelf)
+        {
+            pauseMenu.SetActive(false);
+        }else
+        {
+
+            pauseMenu.SetActive(true);
+        }
     }
 
     // Update is called once per frame
@@ -332,6 +371,8 @@ public class Board : MonoBehaviour
     {
         if (Player1.dead && Player2.dead && !resetMenu.activeInHierarchy)
         {
+            scoreBoard.AddScore(Player1.points);
+            scoreBoard.AddScore(Player2.points);
             resetMenu.SetActive(true);
         }
         UpdatePlayer(Player1, KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D);
